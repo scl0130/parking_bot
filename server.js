@@ -125,8 +125,7 @@ app.post('/automate', async (req, res) => {
             if (await emailInput.count() > 0) await emailInput.first().fill(profile.email);
           } catch {}
         }
-        await clickButton(page, ['park', 'submit', 'confirm', 'register']);
-        console.log('\n✅ All done! Check the browser window.');
+        console.log('\n✅ All filled! Click "Park" in the browser to complete.');
         break goto_email;
       }
       return;
@@ -153,11 +152,8 @@ app.post('/automate', async (req, res) => {
       } catch { console.log('  (Email field not found, skipping)'); }
     }
 
-    // ── Click Park ─────────────────────────────────────────────────
-    console.log('\n🅿️  Clicking Park!');
-    await clickButton(page, ['park', 'Park', 'submit', 'confirm', 'register']);
-
-    console.log('\n✅ Done! Check the browser window for confirmation.');
+    // ── TESTING MODE: Park button left for manual click ────────────
+    console.log('\n✅ All filled! Click "Park" in the browser to complete.');
 
   } catch (err) {
     console.error('\n❌ Automation error:', err.message);
