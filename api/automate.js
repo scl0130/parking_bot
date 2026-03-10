@@ -75,19 +75,20 @@ module.exports = async (req, res) => {
     // Step 5: Validate end time
     await post('validateEnd', base);
 
-    // Step 6: Submit registration
-    const registerPayload = {
-      ...base,
-      additionalFieldValues: [
-        { fieldId: FIELD_FIRST_NAME,    value: firstName },
-        { fieldId: FIELD_LAST_NAME,     value: lastName },
-        { fieldId: FIELD_VOLUNTEER_PIN, value: volunteerPin },
-      ],
-      ...(email ? { email } : {}),
-    };
-    const result = await post('register', registerPayload);
+    // TESTING MODE: all validations passed, skipping final register call
+    res.json({ ok: true, message: '✅ All checks passed! Ready to park.' });
 
-    res.json({ ok: true, message: '✅ Parked! Check your email for confirmation.', result });
+    // PRODUCTION (uncomment when ready to go live):
+    // const result = await post('register', {
+    //   ...base,
+    //   additionalFieldValues: [
+    //     { fieldId: FIELD_FIRST_NAME,    value: firstName },
+    //     { fieldId: FIELD_LAST_NAME,     value: lastName },
+    //     { fieldId: FIELD_VOLUNTEER_PIN, value: volunteerPin },
+    //   ],
+    //   ...(email ? { email } : {}),
+    // });
+    // res.json({ ok: true, message: '✅ Parked! Check your email for confirmation.', result });
 
   } catch (err) {
     console.error('Parking error:', err.message);
