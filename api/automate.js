@@ -84,9 +84,11 @@ module.exports = async (req, res) => {
     });
 
     // Step 7: send confirmation email using the registration ID
+    const confirmationId = registration.confirmation;
+
     let emailSent = false;
-    if (email && registration && registration.id) {
-      await post(`/v2/portal/registration/${registration.id}/sendParkingConfirmationEmail`, {
+    if (email && confirmationId) {
+      await post(`/v2/portal/registration/${confirmationId}/sendParkingConfirmationEmail`, {
         recipient: email,
       });
       emailSent = true;
@@ -95,7 +97,7 @@ module.exports = async (req, res) => {
     const msg = emailSent
       ? '✅ Parked! Confirmation email sent.'
       : '✅ Parked! (No email — add one to your profile to get a confirmation.)';
-    res.json({ ok: true, message: msg, registrationId: registration.id, _debug: registration });
+    res.json({ ok: true, message: msg, registrationId: confirmationId });
 
   } catch (err) {
     console.error('Parking error:', err.message);
