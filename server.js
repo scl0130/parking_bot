@@ -6,9 +6,7 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Try multiple selectors to fill an input field
 async function tryFill(page, hints, value) {
-  // Try by placeholder text
   for (const hint of hints) {
     try {
       const el = page.getByPlaceholder(hint, { exact: false });
@@ -18,8 +16,6 @@ async function tryFill(page, hints, value) {
         return;
       }
     } catch {}
-
-    // Try by label text
     try {
       const el = page.getByLabel(hint, { exact: false });
       if (await el.count() > 0) {
@@ -29,8 +25,7 @@ async function tryFill(page, hints, value) {
       }
     } catch {}
   }
-
-  // Last resort: fill first visible text input
+  // Last resort: first visible text input
   const inputs = page.locator('input[type="text"], input:not([type])');
   const count = await inputs.count();
   for (let i = 0; i < count; i++) {
@@ -41,7 +36,6 @@ async function tryFill(page, hints, value) {
       return;
     }
   }
-
   throw new Error(`Could not find input for hints: ${hints.join(', ')}`);
 }
 
@@ -64,10 +58,11 @@ app.post('/automate', async (req, res) => {
   const profile = req.body;
   console.log(`\n🚀 Starting automation for: ${profile.name}`);
 
-  // Respond immediately so the UI doesn't wait
-  res.json({ ok: true });
-
-  const browser = await chromium.launch({ headless: false, slowMo: 400, channel: 'chrome' });
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+    slowMo: 300,
+  });
   const page = await browser.newPage();
   page.setDefaultTimeout(15000);
 
@@ -77,7 +72,7 @@ app.post('/automate', async (req, res) => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1500);
 
-    // ── Step 1: License Plate ─────────────────────────────────────
+    // ── Step 1: License Plate ──────────────────────────────────────
     console.log('\n📋 Step 1: License Plate');
     await tryFill(page,
       ['license', 'plate', 'License Plate', 'vehicle', 'Plate Number'],
@@ -93,21 +88,19 @@ app.post('/automate', async (req, res) => {
     );
     await clickButton(page, ['next', 'continue', 'proceed']);
 
-    // ── Step 3: Date (keep default, just click Next) ───────────────
+    // ── Step 3: Date (keep default) ────────────────────────────────
     console.log('\n📅 Step 3: Date (keeping default)');
     await clickButton(page, ['next', 'continue', 'proceed']);
 
-    // ── Step 4: First name, Last name, Volunteer PIN ───────────────
+    // ── Step 4: Name + PIN ─────────────────────────────────────────
     console.log('\n👤 Step 4: Name + PIN');
-
-    // Try to fill first name specifically before last name
     try {
       await tryFill(page,
         ['first name', 'first', 'First Name', 'given name'],
         profile.firstName
       );
     } catch {
-      // If "tryFill first" fails, try filling all visible inputs in order
+      // Fallback: fill visible inputs positionally
       const inputs = page.locator('input[type="text"], input:not([type])');
       const count = await inputs.count();
       const visible = [];
@@ -118,30 +111,30 @@ app.post('/automate', async (req, res) => {
       if (visible.length >= 2) await visible[1].fill(profile.lastName);
       if (visible.length >= 3) await visible[2].fill(profile.volunteerPin);
       console.log('  Filled name/pin via positional inputs');
-      goto_email: {
-        if (profile.email) {
-          try {
-            const emailInput = page.locator('input[type="email"]');
-            if (await emailInput.count() > 0) await emailInput.first().fill(profile.email);
-          } catch {}
-        }
-        console.log('\n✅ All filled! Click "Park" in the browser to complete.');
-        break goto_email;
+
+      if (profile.email) {
+        try {
+          const emailInput = page.locator('input[type="email"]');
+          if (await emailInput.count() > 0) await emailInput.first().fill(profile.email);
+        } catch {}
       }
-      return;
+
+      // TESTING MODE: screenshot before Park
+      const screenshot = await page.screenshot({ encoding: 'base64' });
+      await browser.close();
+      console.log('\n✅ All filled! (Testing mode — Park not clicked)');
+      return res.json({ ok: true, screenshot: `data:image/png;base64,${screenshot}` });
     }
 
     await tryFill(page,
       ['last name', 'last', 'Last Name', 'surname', 'family name'],
       profile.lastName
     );
-
     await tryFill(page,
       ['pin', 'volunteer pin', 'Volunteer Pin', 'volunteer number', 'code'],
       profile.volunteerPin
     );
 
-    // ── Optional: Email ────────────────────────────────────────────
     if (profile.email) {
       try {
         const emailInput = page.locator('input[type="email"]');
@@ -152,17 +145,20 @@ app.post('/automate', async (req, res) => {
       } catch { console.log('  (Email field not found, skipping)'); }
     }
 
-    // ── TESTING MODE: Park button left for manual click ────────────
-    console.log('\n✅ All filled! Click "Park" in the browser to complete.');
+    // TESTING MODE: screenshot before Park
+    const screenshot = await page.screenshot({ encoding: 'base64' });
+    await browser.close();
+    console.log('\n✅ All filled! (Testing mode — Park not clicked)');
+    res.json({ ok: true, screenshot: `data:image/png;base64,${screenshot}` });
 
   } catch (err) {
     console.error('\n❌ Automation error:', err.message);
-    console.log('The browser stays open — you can finish manually.');
-    // Don't close browser on error so user can finish by hand
+    try { await browser.close(); } catch {}
+    res.status(500).json({ ok: false, error: err.message });
   }
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`\n🅿️  Parking Bot is ready!`);
   console.log(`   Open: http://localhost:${PORT}\n`);

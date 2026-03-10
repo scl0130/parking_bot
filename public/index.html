@@ -288,6 +288,22 @@
   </div>
 </div>
 
+<!-- Screenshot result modal -->
+<div class="overlay" id="screenshot-overlay" onclick="closeScreenshot(event)">
+  <div class="modal" style="max-width:720px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 style="margin:0">✅ Form Filled!</h2>
+      <button onclick="document.getElementById('screenshot-overlay').classList.remove('show')"
+              style="border:none;background:none;font-size:22px;cursor:pointer;color:#71717a">×</button>
+    </div>
+    <p style="font-size:13px;color:#71717a;margin-bottom:14px">
+      Here's a screenshot of the filled form. The bot stopped before clicking "Park" — verify everything looks correct.
+    </p>
+    <img id="screenshot-img" src="" alt="Form screenshot"
+         style="width:100%;border-radius:8px;border:1px solid #e4e4e7">
+  </div>
+</div>
+
 <!-- Add / Edit Modal -->
 <div class="overlay" id="overlay" onclick="overlayClick(event)">
   <div class="modal">
@@ -470,8 +486,8 @@
     const status = document.getElementById('status');
 
     btn.disabled = true;
-    btn.textContent = 'LAUNCHING ROBOT... 🤖';
-    status.textContent = '';
+    btn.textContent = 'ROBOT IS WORKING... 🤖';
+    status.textContent = 'Filling out the form, this takes ~30 seconds...';
     status.className = 'status';
 
     try {
@@ -483,19 +499,32 @@
       const data = await res.json();
 
       if (data.ok) {
-        status.textContent = '✅ Bot launched! Watch the browser window that just opened.';
-        status.className = 'status ok';
+        status.textContent = '';
+        status.className = 'status';
+        if (data.screenshot) {
+          document.getElementById('screenshot-img').src = data.screenshot;
+          document.getElementById('screenshot-overlay').classList.add('show');
+        } else {
+          status.textContent = '✅ Done!';
+          status.className = 'status ok';
+        }
       } else {
-        status.textContent = '❌ ' + (data.error || 'Something went wrong. Check the terminal.');
+        status.textContent = '❌ ' + (data.error || 'Something went wrong.');
         status.className = 'status err';
       }
     } catch {
-      status.textContent = '❌ Cannot reach the server. Make sure it\'s running (npm start).';
+      status.textContent = '❌ Cannot reach the server.';
       status.className = 'status err';
     }
 
     btn.disabled = false;
     btn.textContent = 'YEET ME INTO A PARKING SPOT 🚀';
+  }
+
+  function closeScreenshot(e) {
+    if (e.target === document.getElementById('screenshot-overlay')) {
+      document.getElementById('screenshot-overlay').classList.remove('show');
+    }
   }
 
   // Keyboard shortcut: Escape closes modal
