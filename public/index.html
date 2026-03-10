@@ -341,7 +341,8 @@
   async function loadProfiles() {
     try {
       const res = await fetch('/api/profiles');
-      profiles = await res.json();
+      const data = await res.json();
+      profiles = Array.isArray(data) ? data : [];
     } catch { profiles = []; }
     render();
   }
