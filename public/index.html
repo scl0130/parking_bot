@@ -499,7 +499,8 @@
       const data = await res.json();
 
       if (data.ok) {
-        status.textContent = data.message || '✅ Parked!';
+        const idPart = data.registrationId ? ` (ID: ${data.registrationId})` : '';
+        status.textContent = (data.message || '✅ Parked!') + idPart;
         status.className = 'status ok';
       } else {
         status.textContent = '❌ ' + (data.error || 'Something went wrong.');
