@@ -334,13 +334,28 @@
 </div>
 
 <script>
-  let profiles = JSON.parse(localStorage.getItem('pp_profiles') || '[]');
+  let profiles   = [];
   let selectedId = localStorage.getItem('pp_selected') || null;
   let editingId  = null;
 
-  function persist() {
-    localStorage.setItem('pp_profiles', JSON.stringify(profiles));
-    localStorage.setItem('pp_selected', selectedId || '');
+  async function loadProfiles() {
+    try {
+      const res = await fetch('/api/profiles');
+      profiles = await res.json();
+    } catch { profiles = []; }
+    render();
+  }
+
+  async function saveProfileToServer(profile) {
+    await fetch('/api/profiles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(profile),
+    });
+  }
+
+  async function deleteProfileFromServer(id) {
+    await fetch(`/api/profiles?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
   }
 
   function esc(s) {
@@ -392,18 +407,18 @@
 
   function select(id) {
     selectedId = id;
+    localStorage.setItem('pp_selected', id);
     document.getElementById('status').textContent = '';
     document.getElementById('status').className = 'status';
-    persist();
     render();
   }
 
-  function del(id) {
+  async function del(id) {
     if (!confirm('Delete this profile?')) return;
     profiles = profiles.filter(p => p.id !== id);
-    if (selectedId === id) selectedId = null;
-    persist();
+    if (selectedId === id) { selectedId = null; localStorage.removeItem('pp_selected'); }
     render();
+    await deleteProfileFromServer(id);
   }
 
   function openModal(id = null) {
@@ -437,29 +452,29 @@
     if (e.target === document.getElementById('overlay')) closeModal();
   }
 
-  function saveProfile() {
-    const name        = document.getElementById('f-name').value.trim();
-    const firstName   = document.getElementById('f-first').value.trim();
-    const lastName    = document.getElementById('f-last').value.trim();
+  async function saveProfile() {
+    const name         = document.getElementById('f-name').value.trim();
+    const firstName    = document.getElementById('f-first').value.trim();
+    const lastName     = document.getElementById('f-last').value.trim();
     const licensePlate = document.getElementById('f-plate').value.trim().toUpperCase();
     const volunteerPin = document.getElementById('f-pin').value.trim();
-    const email       = document.getElementById('f-email').value.trim();
+    const email        = document.getElementById('f-email').value.trim();
 
     if (!name || !firstName || !lastName || !licensePlate || !volunteerPin) {
       alert('Please fill out all required fields.');
       return;
     }
 
-    if (editingId) {
-      const idx = profiles.findIndex(p => p.id === editingId);
-      profiles[idx] = { ...profiles[idx], name, firstName, lastName, licensePlate, volunteerPin, email };
-    } else {
-      profiles.push({ id: Date.now().toString(), name, firstName, lastName, licensePlate, volunteerPin, email });
-    }
+    const profile = editingId
+      ? { ...profiles.find(p => p.id === editingId), name, firstName, lastName, licensePlate, volunteerPin, email }
+      : { id: Date.now().toString(), name, firstName, lastName, licensePlate, volunteerPin, email };
 
-    persist();
+    if (editingId) profiles[profiles.findIndex(p => p.id === editingId)] = profile;
+    else profiles.push(profile);
+
     closeModal();
     render();
+    await saveProfileToServer(profile);
   }
 
   async function parkIt() {
@@ -475,7 +490,7 @@
     status.className = 'status';
 
     try {
-      const res  = await fetch('/automate', {
+      const res  = await fetch('/api/automate', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(profile),
@@ -503,7 +518,7 @@
     if (e.key === 'Escape') closeModal();
   });
 
-  render();
+  loadProfiles();
 </script>
 
 </body>
