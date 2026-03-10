@@ -67,7 +67,7 @@ app.post('/automate', async (req, res) => {
   // Respond immediately so the UI doesn't wait
   res.json({ ok: true });
 
-  const browser = await chromium.launch({ headless: false, slowMo: 400 });
+  const browser = await chromium.launch({ headless: false, slowMo: 400, channel: 'chrome' });
   const page = await browser.newPage();
   page.setDefaultTimeout(15000);
 
