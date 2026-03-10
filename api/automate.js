@@ -74,7 +74,7 @@ module.exports = async (req, res) => {
     await post(`${settingsBase}/validateEnd`,       base);
 
     // Step 6: register
-    const registration = await post(`${settingsBase}/registration`, {
+    const registration = await post(`/v2/portal/registration`, {
       ...base,
       additionalFieldValues: [
         { id: FIELD_FIRST_NAME,    label: 'First Name',           value: firstName,    additionalField: { id: FIELD_FIRST_NAME } },
