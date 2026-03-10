@@ -95,7 +95,7 @@ module.exports = async (req, res) => {
     const msg = emailSent
       ? '✅ Parked! Confirmation email sent.'
       : '✅ Parked! (No email — add one to your profile to get a confirmation.)';
-    res.json({ ok: true, message: msg, registrationId: registration.id });
+    res.json({ ok: true, message: msg, registrationId: registration.id, _debug: registration });
 
   } catch (err) {
     console.error('Parking error:', err.message);
